@@ -2,7 +2,7 @@ name: celestory
 
 x-casaos:
   name: Celestory
-  icon: https://creator.celestory.io/favicon.ico
+  icon: https://storage.googleapis.com/voltask-assets/celestory.png
   title: Celestory Self-Hosted
   author: Celestory
   category: Productivity
