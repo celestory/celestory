@@ -1,0 +1,158 @@
+name: celestory
+
+x-casaos:
+  name: Celestory
+  icon: https://creator.celestory.io/favicon.ico
+  title: Celestory Self-Hosted
+  author: Celestory
+  category: Productivity
+  description: Self-hosted Celestory suite.
+  main: frontend
+  architectures:
+    - amd64
+    - arm64
+
+services:
+  frontend:
+    image: celestory/frontend:latest
+    container_name: celestory-frontend
+    environment:
+      CLOUD_API_URL: http://api
+      ACCOUNT_API_URL: http://auth
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "1"
+    depends_on:
+      - auth
+
+  hub:
+    image: celestory/hub:latest
+    container_name: celestory-hub
+    environment:
+      AUTH_ORIGIN: http://auth
+      AUTH_CLIENT_ID: ${AUTH_CLIENT_ID}
+      AUTH_CLIENT_SECRET: ${AUTH_CLIENT_SECRET}
+      AUTH_JWKS_URI: http://auth/.well-known/jwks.json
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE}
+      DB_HUB_URL: postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/hub
+      AUTHORITY_SERVER_URL: https://celestory-hub-575193114089.europe-west1.run.app
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      AUTH_AUTHORITY_SECRET: ${AUTH_AUTHORITY_SECRET}
+      PORT: 3000
+      ORIGIN: http://localhost:${HUB_PORT:-3001}
+    ports:
+      - "${HUB_PORT:-3001}:3000"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    image: celestory/api:latest
+    container_name: celestory-api
+    volumes:
+      - project_files:/app/projectFiles
+    environment:
+      PORT: 80
+      SELF_HOSTED: true
+      API_LOGGING: true
+      STORAGE_SOLUTION: filesystem
+      AUTH_DOMAIN: http://auth
+      AUTH_CLIENT_ID: ${AUTH_CLIENT_ID}
+      AUTH_CLIENT_SECRET: ${AUTH_CLIENT_SECRET}
+      AUTH_JWKS_URI: http://auth/.well-known/jwks.json
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE}
+      GENERATOR_URL: http://generator
+      ORIGIN: ${ORIGIN:-localhost:3000}/api
+      DB_URL: postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/celestory
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  generator:
+    image: celestory/generator:latest
+    container_name: celestory-generator
+    volumes:
+      - project_files:/usr/src/app/projectFiles
+    environment:
+      PORT: 80
+      API_LOG: true
+      STORAGE_SOLUTION: filesystem
+      PROJECT_FILES_PATH: /usr/src/app/projectFiles
+      PROJECT_FILES_PREFIX: /api/filesystem/
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "1"
+    depends_on:
+      - api
+
+  auth:
+    image: celestory/auth:latest
+    container_name: celestory-auth
+    environment:
+      PORT: 80
+      API_ENV: true
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_DATABASE: auth
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      API_ACCESS_TOKEN_TTL: 604800
+      API_REFRESH_TOKEN_TTL: 1209600
+      USE_SELF_HOSTED_CLIENT: true
+      API_AUTHORITY_SECRET: ${AUTH_AUTHORITY_SECRET}
+      API_OAUTH_ISSUER: celestory_auth
+      SELF_HOSTED_REDIRECT_URI: http://localhost:${FRONTEND_PORT:-3000}/callback
+      GENERATE_KEYS: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    container_name: celestory-db
+    ports:
+      - "1333:5432"
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_MULTIPLE_DATABASES: auth,celestory,hub
+    volumes:
+      - ./volumes/db-scripts:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "1"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -p 5432 -U celestory" ]
+      retries: 5
+      timeout: 5s
+      interval: 5s
+    restart: always
+
+volumes:
+  postgres_data:
+  project_files:
