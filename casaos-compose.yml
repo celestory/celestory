@@ -60,7 +60,7 @@ services:
     image: celestory/api:latest
     container_name: celestory-api
     volumes:
-      - project_files:/app/projectFiles
+      - /DATA/AppData/celestory/project_files:/app/projectFiles
     environment:
       PORT: 80
       SELF_HOSTED: true
@@ -87,7 +87,7 @@ services:
     image: celestory/generator:latest
     container_name: celestory-generator
     volumes:
-      - project_files:/usr/src/app/projectFiles
+      - /DATA/AppData/celestory/project_files:/usr/src/app/projectFiles
     environment:
       PORT: 80
       API_LOG: true
@@ -140,7 +140,7 @@ services:
       POSTGRES_MULTIPLE_DATABASES: auth,celestory,hub
     volumes:
       - ./volumes/db-scripts:/docker-entrypoint-initdb.d
-      - postgres_data:/var/lib/postgresql/data
+      - /DATA/AppData/celestory/postgres_data:/var/lib/postgresql/data
     logging:
       driver: "json-file"
       options:
@@ -154,5 +154,4 @@ services:
     restart: always
 
 volumes:
-  postgres_data:
   project_files:
