@@ -1,17 +1,5 @@
 name: celestory
 
-x-casaos:
-  name: Celestory
-  icon: https://storage.googleapis.com/voltask-assets/celestory.png
-  title: Celestory Self-Hosted
-  author: Celestory
-  category: Productivity
-  description: Self-hosted Celestory suite.
-  main: frontend
-  architectures:
-    - amd64
-    - arm64
-
 services:
   frontend:
     image: celestory/frontend:latest
@@ -20,7 +8,9 @@ services:
       CLOUD_API_URL: http://api
       ACCOUNT_API_URL: http://auth
     ports:
-      - "${FRONTEND_PORT:-3000}:80"
+      - target: 80
+        published: "${FRONTEND_PORT:-3000}"
+        protocol: tcp
     logging:
       driver: "json-file"
       options:
@@ -44,9 +34,11 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       AUTH_AUTHORITY_SECRET: ${AUTH_AUTHORITY_SECRET}
       PORT: 3000
-      ORIGIN: http://localhost:${HUB_PORT:-3001}
+      ORIGIN: ${HUB_ORIGIN:-http://localhost:3001}
     ports:
-      - "${HUB_PORT:-3001}:3000"
+      - target: 3000
+        published: "${HUB_PORT:-3001}"
+        protocol: tcp
     logging:
       driver: "json-file"
       options:
@@ -60,7 +52,9 @@ services:
     image: celestory/api:latest
     container_name: celestory-api
     volumes:
-      - /DATA/AppData/celestory/project_files:/app/projectFiles
+      - type: bind
+        source: /DATA/AppData/celestory/project_files/
+        target: /app/projectFiles
     environment:
       PORT: 80
       SELF_HOSTED: true
@@ -87,7 +81,9 @@ services:
     image: celestory/generator:latest
     container_name: celestory-generator
     volumes:
-      - /DATA/AppData/celestory/project_files:/usr/src/app/projectFiles
+      - type: bind
+        source: /DATA/AppData/celestory/project_files/
+        target: /usr/src/app/projectFiles
     environment:
       PORT: 80
       API_LOG: true
@@ -118,7 +114,7 @@ services:
       USE_SELF_HOSTED_CLIENT: true
       API_AUTHORITY_SECRET: ${AUTH_AUTHORITY_SECRET}
       API_OAUTH_ISSUER: celestory_auth
-      SELF_HOSTED_REDIRECT_URI: http://localhost:${FRONTEND_PORT:-3000}/callback
+      SELF_HOSTED_REDIRECT_URI: ${ORIGIN:-http://localhost:3000}/callback
       GENERATE_KEYS: true
     logging:
       driver: "json-file"
@@ -132,15 +128,17 @@ services:
   db:
     image: postgres:16-alpine
     container_name: celestory-db
-    ports:
-      - "1333:5432"
     environment:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_MULTIPLE_DATABASES: auth,celestory,hub
     volumes:
-      - ./volumes/db-scripts:/docker-entrypoint-initdb.d
-      - /DATA/AppData/celestory/postgres_data:/var/lib/postgresql/data
+      - type: bind
+        source: ./volumes/db-scripts
+        target: /docker-entrypoint-initdb.d
+      - type: bind
+        source: /DATA/AppData/celestory/postgres_data/
+        target: /var/lib/postgresql/data
     logging:
       driver: "json-file"
       options:
@@ -152,6 +150,16 @@ services:
       timeout: 5s
       interval: 5s
     restart: always
+x-casaos:
+  name: Celestory
+  icon: https://storage.googleapis.com/voltask-assets/celestory.png
+  thumbnail: https://storage.googleapis.com/voltask-assets/celestory.png
+  title: Celestory Self-Hosted
+  author: Celestory
+  category: Productivity
+  description: Self-hosted Celestory suite.
+  main: frontend
+  architectures:
+    - amd64
+    - arm64
 
-volumes:
-  project_files:
