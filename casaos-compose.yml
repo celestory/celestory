@@ -53,7 +53,7 @@ services:
     container_name: celestory-api
     volumes:
       - type: bind
-        source: /DATA/AppData/celestory/project_files/
+        source: /DATA/AppData/celestory/project_files
         target: /app/projectFiles
     environment:
       PORT: 80
@@ -82,7 +82,7 @@ services:
     container_name: celestory-generator
     volumes:
       - type: bind
-        source: /DATA/AppData/celestory/project_files/
+        source: /DATA/AppData/celestory/project_files
         target: /usr/src/app/projectFiles
     environment:
       PORT: 80
@@ -137,7 +137,7 @@ services:
         source: ./volumes/db-scripts
         target: /docker-entrypoint-initdb.d
       - type: bind
-        source: /DATA/AppData/celestory/postgres_data/
+        source: /DATA/AppData/celestory/postgres_data
         target: /var/lib/postgresql/data
     logging:
       driver: "json-file"
@@ -151,15 +151,18 @@ services:
       interval: 5s
     restart: always
 x-casaos:
-  name: Celestory
-  icon: https://storage.googleapis.com/voltask-assets/celestory.png
-  thumbnail: https://storage.googleapis.com/voltask-assets/celestory.png
-  title: Celestory Self-Hosted
-  author: Celestory
-  category: Productivity
-  description: Self-hosted Celestory suite.
-  main: frontend
   architectures:
     - amd64
     - arm64
+  main: frontend
+  port_map: "3000"
+  description:
+    en_us: Self-hosted Celestory suite.
+  author: Celestory
+  developer: Celestory
+  icon: https://storage.googleapis.com/voltask-assets/celestory.png
+  thumbnail: https://storage.googleapis.com/voltask-assets/celestory.png
+  title:
+    en_us: Celestory
+  category: Productivity
 
