@@ -14,6 +14,19 @@ Before you begin, ensure you have the following installed:
 > [!IMPORTANT] > **You must have an active Celestory license to use this software.**
 > Please contact [Celestory Support](mailto:contact@celestory.io) or visit our [website](https://celestory.io) to obtain a license.
 
+## Available Configurations
+
+This repository provides multiple compose files for different deployment scenarios:
+
+| File | Description |
+|------|-------------|
+| `celestory-compose.yml` | Celestory core platform |
+| `voltask-compose.yml` | Voltask service only |
+| `celestory-voltask-compose.yml` | Combined Celestory + Voltask |
+
+For CasaOS users, use the `-casaos` variants:
+`celestory-casaos-compose.yml`, `voltask-casaos-compose.yml`, `celestory-voltask-casaos-compose.yml`
+
 ## Installation
 
 1.  **Clone the repository:**
@@ -23,7 +36,21 @@ Before you begin, ensure you have the following installed:
     cd celestory
     ```
 
-2.  **Configure Environment Variables:**
+2.  **Choose your configuration:**
+    Copy the appropriate example file to `compose.yml`:
+
+    ```bash
+    # For Celestory only
+    cp celestory-compose.yml compose.yml
+
+    # For Voltask only
+    cp voltask-compose.yml compose.yml
+
+    # For both
+    cp celestory-voltask-compose.yml compose.yml
+    ```
+
+3.  **Configure Environment Variables:**
     Copy the example environment file to `.env`:
 
     ```bash
@@ -32,14 +59,14 @@ Before you begin, ensure you have the following installed:
 
     Edit the `.env` file and update the values as needed. You can leave the defaults for a local test setup.
 
-3.  **Start the Services:**
-    Run the following command to start the Celestory suite:
+4.  **Start the Services:**
+    Run the following command to start the services:
 
     ```bash
     docker compose up -d
     ```
 
-4.  **Access the Application:**
+5.  **Access the Application:**
     Once the services are up and running, you can access the Celestory frontend at:
     http://localhost:3000 (or the port you specified in `FRONTEND_PORT`)
 

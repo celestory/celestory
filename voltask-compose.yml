@@ -1,0 +1,190 @@
+services:
+  voltask:
+    image: celestory/voltask:latest
+    container_name: voltask
+    restart: unless-stopped
+    ports:
+      - "${VOLTASK_PORT}:${VOLTASK_PORT}"
+    environment:
+      PORT: ${VOLTASK_PORT}
+      HOST_URL: ${VOLTASK_HOST_URL}
+      VOLTASK_URL: http://voltask:${VOLTASK_PORT}
+      WEBHOOK_URL: ${VOLTASK_WEBHOOK_URL}
+      DATABASE_URL: postgresql://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}:5432/voltask?schema=voltask
+      ORCHESTRATOR_URL: http://orchestrator:${VOLTASK_ORCHESTRATOR_PORT}
+      CELESTORY_AUTH_URL: ${CELESTORY_AUTH_URL}
+      PLUGINS_BUN_URL: http://plugins-bun:${VOLTASK_PLUGINS_BUN_PORT}
+      PLUGINS_DENO_URL: http://plugins-deno:${VOLTASK_PLUGINS_DENO_PORT}
+      CELESTORY_AUTH_CLIENT_ID: ${CELESTORY_AUTH_CLIENT_ID}
+      CELESTORY_AUTH_CLIENT_SECRET: ${CELESTORY_AUTH_CLIENT_SECRET}
+      CELESTORY_AUTH_AUDIENCE: ${CELESTORY_AUTH_AUDIENCE}
+      LICENSE_API_URL: http://hub:3000
+      PREMISE: on-premise
+      PREMISE_USER_EMAIL: ${VOLTASK_PREMISE_USER_EMAIL}
+      PREMISE_USER_PASSWORD: ${VOLTASK_PREMISE_USER_PASSWORD}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+      plugins-deno:
+        condition: service_healthy
+      plugins-bun:
+        condition: service_healthy
+      orchestrator:
+        condition: service_healthy
+
+  auth:
+    image: celestory/auth:latest
+    container_name: celestory-auth
+    restart: unless-stopped
+    environment:
+      PORT: 80
+      API_ENV: true
+      DB_HOST: ${DB_HOST}
+      DB_PORT: 5432
+      DB_DATABASE: auth
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      API_ACCESS_TOKEN_TTL: 604800
+      API_REFRESH_TOKEN_TTL: 1209600
+      USE_SELF_HOSTED_CLIENT: true
+      API_AUTHORITY_SECRET: ${AUTH_AUTHORITY_SECRET}
+      API_OAUTH_ISSUER: celestory_auth
+      SELF_HOSTED_REDIRECT_URI: http://localhost:${VOLTASK_PORT:-3000}/callback
+      GENERATE_KEYS: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:80/', (res) => { if (res.statusCode === 200) process.exit(0); else process.exit(1); }).on('error', (e) => { process.exit(1); })"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  orchestrator:
+    image: celestory/voltask-orchestrator:latest
+    container_name: orchestrator
+    restart: unless-stopped
+    environment:
+      PORT: ${VOLTASK_ORCHESTRATOR_PORT}
+      DATABASE_URL: postgresql://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}:5432/orchestrator?sslmode=disable
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${VOLTASK_ORCHESTRATOR_PORT}/statements"]
+      retries: 3
+      timeout: 60s
+      interval: 10s
+      start_period: 10s
+      start_interval: 10s
+
+  plugins-bun:
+    image: celestory/voltask-plugins-bun:latest
+    container_name: plugins-bun
+    restart: unless-stopped
+    environment:
+      PORT: ${VOLTASK_PLUGINS_BUN_PORT}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "1"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${VOLTASK_PLUGINS_BUN_PORT}/imap"]
+      retries: 3
+      timeout: 60s
+      interval: 10s
+      start_period: 10s
+      start_interval: 10s
+
+  plugins-deno:
+    image: celestory/voltask-plugins-deno:latest
+    container_name: plugins-deno
+    restart: unless-stopped
+    environment:
+      PORT: ${VOLTASK_PLUGINS_DENO_PORT}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "1"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${VOLTASK_PLUGINS_DENO_PORT}/deno"]
+      retries: 3
+      timeout: 60s
+      interval: 10s
+      start_period: 10s
+      start_interval: 10s
+
+  hub:
+    image: celestory/hub:latest
+    container_name: celestory-hub
+    environment:
+      AUTH_ORIGIN: http://auth
+      AUTH_CLIENT_ID: ${AUTH_CLIENT_ID}
+      AUTH_CLIENT_SECRET: ${AUTH_CLIENT_SECRET}
+      AUTH_JWKS_URI: http://auth/.well-known/jwks.json
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE}
+      DB_HUB_URL: postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/hub
+      DB_VOLTASK_URL: postgres://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST}/voltask
+      AUTHORITY_SERVER_URL: https://celestory-hub-575193114089.europe-west1.run.app
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      AUTH_AUTHORITY_SECRET: ${AUTH_AUTHORITY_SECRET}
+      PORT: 3000
+      ORIGIN: http://localhost:${HUB_PORT:-3001}
+    ports:
+      - "${HUB_PORT:-3001}:3000"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    container_name: voltask-db
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "1"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} && psql -U ${DB_USERNAME} -c '\\l' | grep -q voltask"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
