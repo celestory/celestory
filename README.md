@@ -73,6 +73,17 @@ For CasaOS users, use the `-casaos` variants:
     You can access the **Hub (Licensing Manager)** at:
     http://localhost:3001 (or the port you specified in `HUB_PORT`)
 
+6.  **Initial Setup:**
+    Before using the platform, complete the following steps:
+
+    | Step | Action | Credentials |
+    |------|--------|-------------|
+    | 1 | Connect to the Hub | Use `ADMIN_USERNAME` / `ADMIN_PASSWORD` from `.env` |
+    | 2 | Redeem your Celestory license | Enter your license key in the Hub interface |
+    | 3 | Assign seats to users | Create users and assign them license seats |
+    | 4 | Connect to Celestory | Use the email assigned in step 3 |
+    | 5 | Connect to Voltask (if deployed) | Use `VOLTASK_PREMISE_USER_EMAIL` / `VOLTASK_PREMISE_USER_PASSWORD` from `.env` |
+
 ## Configuration
 
 The `.env` file controls the configuration of the services. Key variables include:
